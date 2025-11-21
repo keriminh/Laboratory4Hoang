@@ -208,14 +208,12 @@ void __ISR(_CHANGE_NOTICE_VECTOR, IPL5SOFT) CNINT(void){
     } else if(PORTDbits.RD13 == 0){ // S4 pressed, controlMode = 1
         controlMode = 1;
     }
-    
     IFS1bits.CNIF = 0;	// Clear CN flag
-    return;
 }
 
 void __ISR(_EXTERNAL_2_VECTOR, IPL5SOFT) S5(void){ // External interrupt 2 for S5
     controlMode = 2;
-    return;
+    IFS0bits.INT2IF = 0;
 }
 
 void __ISR(_UART_2_VECTOR, IPL6SOFT) U2RX(void){
@@ -235,7 +233,6 @@ void __ISR(_UART_2_VECTOR, IPL6SOFT) U2RX(void){
     _CP0_SET_COUNT(0);
     
     IFS1bits.U2RXIF = 0;	 // Clear flag
-    return;
 }
 
 void __ISR(_TIMER_5_VECTOR, IPL5SOFT) T5(void){
@@ -261,7 +258,6 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) T5(void){
         IEC0bits.T5IE = 0;  // Disable T5
     }
     IFS0bits.T5IF = 0;      // Clear flag
-    return;
 }
 
 void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
@@ -290,7 +286,6 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
         LATAbits.LATA7 = 1;         // Turn on LED D10 to check
         
     }
-    return;
 }
 
 void readUART2(char* message, int maxLength){
@@ -334,5 +329,6 @@ int read_potentiometer(void){
 
     return ADC1BUF0;   // Return result in 10 bits
 }
+
 
 
