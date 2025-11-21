@@ -35,15 +35,21 @@ static volatile int count = 0;
 static volatile float referenceAngle = 0;   // Reference angle
 static volatile float angle = 0;            // Current angle
 
+/* Initialize functions */
 void readUART2(char* message, int maxLength);
 void writeUART2(const char* string);
+int read_potentiometer(void);
+
+/* Control mode flag */
+static volatile int controlMode = 0;
 
 
 void main(void){
     DDPCON = 0;
-    TRISAbits.TRISA0 = 0;	// LED D3
-    TRISAbits.TRISA1 = 0;	// LED D4
-    TRISAbits.TRISA3 = 0;	// LEd D6
+//    TRISAbits.TRISA0 = 0;	// LED D3
+//    TRISAbits.TRISA1 = 0;	// LED D4
+//    TRISAbits.TRISA3 = 0;	// LEd D6
+    TRISA = 0xFF00;
     
     TRISFbits.TRISF0 = 0;   // Status pin 87
     TRISFbits.TRISF1 = 0;   // Status pin 88
@@ -59,6 +65,7 @@ void main(void){
     // Change notification interrupt
     CNCONbits.ON = 1;       // Enable CN interrupt
     CNENbits.CNEN19 = 1;    // Enable change notification interrupt CN19 (S4)
+    CNENbits.CNEN15 = 1;    // Enable change notification interrupt CN15 (S3)
     CNENbits.CNEN8 = 1;     // Enable change notification interrupt CN8 (Encoder A)
     CNENbits.CNEN9 = 1;     // Enable change notification interrupt CN8 (Encoder B)
     
@@ -74,6 +81,13 @@ void main(void){
     IFS1bits.U2RXIF = 0;    // Clear flag
     IEC1bits.U2RXIE = 1;    // Enable U2RX interrupt
     
+    // External interrupt 2
+    INTCONbits.INT2EP = 0;  // INT2 triggers on falling edge
+    IPC2bits.INT2IP = 4;    // Priority 5 for INT2
+    IPC2bits.INT2IS = 0;    // Sub-priority 0 for INT2
+    IFS0bits.INT2IF = 0;    // Clear status bit for INT2
+    IEC0bits.INT2IE = 1;    // Enable interrupts INT2
+    
     // Timer interrupt
     // Timer 5
     TMR5 = 0;
@@ -88,12 +102,23 @@ void main(void){
     // Timer 2
     TMR2 = 0;
     PR2 = 6249;             // 50Hz
-    T2CONbits.TCKPS = 0b111;// 1:256 prescale value
+    T2CONbits.TCKPS = 0b111;// 1:256 prescalar value
     T2CONbits.TGATE = 0;
     T2CONbits.TCS = 0;
     IPC2bits.T2IP = 5;      // Sub-priority 0 for Timer 2
     IPC2bits.T2IS = 0;      // Sub-priority 0 for Timer 2
     IFS0bits.T2IF = 0;      // CLear flag
+    
+    // Timer 3 and OC4
+    TMR3 = 0;
+    PR3 = 1022;
+    T3CONbits.TCKPS = 0b011;// 1:8 prescalar
+    OC4CONbits.OCM = 0b110; // PWM mode on, fault pin disabled
+    OC4CONbits.OCTSEL = 1;  // Use Timer 3 for timing
+    OC4RS = 1023;
+    OC4R = 1023;
+    T3CONbits.ON = 1;
+    OC4CONbits.ON = 1;      // Turn on OC4
 
     __builtin_enable_interrupts();
     
@@ -176,7 +201,20 @@ void __ISR(_CHANGE_NOTICE_VECTOR, IPL5SOFT) CNINT(void){
 	// Update previous state
 	prev_encoderA = encoderA;
 	prev_encoderB = encoderB;
+    
+    // Update controlMode when pressing S3 or S4
+    if(PORTDbits.RD6 == 0){         // S3 pressed, controlMode = 0
+        controlMode = 0;
+    } else if(PORTDbits.RD13 == 0){ // S4 pressed, controlMode = 1
+        controlMode = 1;
+    }
+    
     IFS1bits.CNIF = 0;	// Clear CN flag
+    return;
+}
+
+void __ISR(_EXTERNAL_2_VECTOR, IPL5SOFT) S5(void){ // External interrupt 2 for S5
+    controlMode = 2;
     return;
 }
 
@@ -197,6 +235,7 @@ void __ISR(_UART_2_VECTOR, IPL6SOFT) U2RX(void){
     _CP0_SET_COUNT(0);
     
     IFS1bits.U2RXIF = 0;	 // Clear flag
+    return;
 }
 
 void __ISR(_TIMER_5_VECTOR, IPL5SOFT) T5(void){
@@ -222,24 +261,36 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) T5(void){
         IEC0bits.T5IE = 0;  // Disable T5
     }
     IFS0bits.T5IF = 0;      // Clear flag
+    return;
 }
 
 void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
     angle = count * 360 / (ENCODER_CPR * ENCODER_GEAR_RATIO);
     float angleDiff = referenceAngle - angle; // Angle difference between reference angle and current angle
-    if(angleDiff < -7.5){       // If ref angle < current angle 
-        // F1 = 1; F0 = 0 to decrease count
-        LATFbits.LATF1 = 1;
-        LATFbits.LATF0 = 0;
-    } else if(angleDiff > 7.5){ // If ref angle > current angle
-        // F1 = 0; F0 = 1 to increase count
-        LATFbits.LATF1 = 0;
-        LATFbits.LATF0 = 1;
-    } else{                     // If angleDiff is within -7.5 and 7.5 then stop changing the count                          
-        // F1 = 0; F0 = 0 to stop changing count
-        LATFbits.LATF1 = 0;
-        LATFbits.LATF0 = 0;
+    OC4RS = read_potentiometer();           // Assign potentiometer value to OC4RS
+    if(controlMode == 0){
+        LATAbits.LATA5 = 1;         // Turn on LED D8 to check
+        if(angleDiff < -7.5){       // If ref angle < current angle 
+            // F1 = 1; F0 = 0 to decrease count
+            LATFbits.LATF1 = 1;
+            LATFbits.LATF0 = 0;
+        } else if(angleDiff > 7.5){ // If ref angle > current angle
+            // F1 = 0; F0 = 1 to increase count
+            LATFbits.LATF1 = 0;
+            LATFbits.LATF0 = 1;
+        } else{                     // If angleDiff is within -7.5 and 7.5 then stop changing the count                          
+            // F1 = 0; F0 = 0 to stop changing count
+            LATFbits.LATF1 = 0;
+            LATFbits.LATF0 = 0;
+        }
+    } else if(controlMode == 1){
+        LATAbits.LATA6 = 1;         // Turn on LED D9 to check
+        
+    } else if(controlMode == 2){
+        LATAbits.LATA7 = 1;         // Turn on LED D10 to check
+        
     }
+    return;
 }
 
 void readUART2(char* message, int maxLength){
@@ -269,5 +320,19 @@ void writeUART2(const char *message){
     return;
 }
 
+int read_potentiometer(void){
+    AD1CHSbits.CH0SA = 2;   // Analog input 2
+    AD1CON1bits.SAMP = 1;   // Start sampling
+    // Wait for 100 core timer ticks so capacitor can reach steady state
+    unsigned int start = _CP0_GET_COUNT();
+    unsigned int current = _CP0_GET_COUNT();
+    while( (current - start) < 100 ){
+        current = _CP0_GET_COUNT();
+    }
+    AD1CON1bits.SAMP = 0;   // Hold sampling, start conversion
+    while(!AD1CON1bits.DONE){;}   // Wait until conversion is done
+
+    return ADC1BUF0;   // Return result in 10 bits
+}
 
 
