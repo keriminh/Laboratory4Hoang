@@ -264,7 +264,7 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
     angle = count * 360 / (ENCODER_CPR * ENCODER_GEAR_RATIO);
     float angleDiff = referenceAngle - angle; // Angle difference between reference angle and current angle
     OC4RS = read_potentiometer();           // Assign potentiometer value to OC4RS
-    if(controlMode == 0){
+    if(controlMode == 0){			// Potentiometer control
         LATAbits.LATA5 = 1;         // Turn on LED D8 to check
         if(angleDiff < -7.5){       // If ref angle < current angle 
             // F1 = 1; F0 = 0 to decrease count
@@ -279,10 +279,10 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
             LATFbits.LATF1 = 0;
             LATFbits.LATF0 = 0;
         }
-    } else if(controlMode == 1){
+    } else if(controlMode == 1){	// Proportional control
         LATAbits.LATA6 = 1;         // Turn on LED D9 to check
         
-    } else if(controlMode == 2){
+    } else if(controlMode == 2){	// Proportional-integral control
         LATAbits.LATA7 = 1;         // Turn on LED D10 to check
         
     }
@@ -329,6 +329,7 @@ int read_potentiometer(void){
 
     return ADC1BUF0;   // Return result in 10 bits
 }
+
 
 
 
