@@ -35,7 +35,7 @@ static volatile float referenceAngle = 0;   // Reference angle
 static volatile float angle = 0;            // Current angle
 
 static volatile float e_p = 0.0;       // Error for proportional (exercise E3)
-const float g_p = 4.0;
+const float g_p = 4.0;                 // Proportional gain
 static volatile float e_i = 0.0;       // Error for proportional-integral (exercise E4)
 const float g_i = 2.0;
 
