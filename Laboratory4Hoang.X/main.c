@@ -291,11 +291,11 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
             OC4RS = fabs(k_p * e_p);
         }
 
-        if(angleDiff < -7.5){       // If ref angle < current angle 
+        if(angleDiff < 0){       // If ref angle < current angle 
             // F1 = 1; F0 = 0 to decrease count
             LATFbits.LATF1 = 1;
             LATFbits.LATF0 = 0;
-        } else if(angleDiff > 7.5){ // If ref angle > current angle
+        } else if(angleDiff > 0){ // If ref angle > current angle
             // F1 = 0; F0 = 1 to increase count
             LATFbits.LATF1 = 0;
             LATFbits.LATF0 = 1;
@@ -316,11 +316,11 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
             OC4RS = fabs((k_p * e_p) + (k_i * e_i));
         }
 
-        if(angleDiff < -7.5){       // If ref angle < current angle 
+        if(angleDiff < 0){       // If ref angle < current angle 
             // F1 = 1; F0 = 0 to decrease count
             LATFbits.LATF1 = 1;
             LATFbits.LATF0 = 0;
-        } else if(angleDiff > 7.5){ // If ref angle > current angle
+        } else if(angleDiff > 0){ // If ref angle > current angle
             // F1 = 0; F0 = 1 to increase count
             LATFbits.LATF1 = 0;
             LATFbits.LATF0 = 1;
