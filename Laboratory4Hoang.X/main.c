@@ -35,9 +35,9 @@ static volatile float referenceAngle = 0;   // Reference angle
 static volatile float angle = 0;            // Current angle
 
 static volatile float e_p = 0.0;       // Error for proportional (exercise E3)
-const float k_p = 4.0;
+const float g_p = 4.0;
 static volatile float e_i = 0.0;       // Error for proportional-integral (exercise E4)
-const float k_i = 2.0;
+const float g_i = 2.0;
 
 /* Initialize functions */
 void readUART2(char* message, int maxLength);
@@ -285,10 +285,10 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
     } else if(controlMode == 1){	// Proportional control
         LATAbits.LATA6 = 1;         // Turn on LED D9 to check
         e_p = angleDiff;
-        if(fabs(k_p * e_p) >= 1023){
+        if(fabs(g_p * e_p) >= 1023){
             OC4RS = 1023;
         } else{
-            OC4RS = fabs(k_p * e_p);
+            OC4RS = fabs(g_p * e_p);
         }
 
         if(angleDiff < 0){       // If ref angle < current angle 
@@ -310,10 +310,10 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
         e_p = angleDiff;
         e_i = e_i + (1/50) * e_p;
 
-        if(fabs((k_p * e_p) + (k_i * e_i)) >= 1023){
+        if(fabs((g_p * e_p) + (g_i * e_i)) >= 1023){
             OC4RS = 1023;
         } else{
-            OC4RS = fabs((k_p * e_p) + (k_i * e_i));
+            OC4RS = fabs((g_p * e_p) + (g_i * e_i));
         }
 
         if(angleDiff < 0){       // If ref angle < current angle 
