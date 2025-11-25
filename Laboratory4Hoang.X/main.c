@@ -20,6 +20,7 @@ Description: In this file, the system clock is set to operate at 80MHz and multi
 #include <stdlib.h>
 #include <xc.h>
 #include <sys/attribs.h>
+#include <math.h>
 #include "lcd_display_driver.h"
 
 #define ENCODER_CPR 48              // Counts per revolution of the encoder
@@ -34,6 +35,9 @@ static volatile int count = 0;
 
 static volatile float referenceAngle = 0;   // Reference angle
 static volatile float angle = 0;            // Current angle
+
+static volatile float error_E3 = 0.0;       // Error for proportional (exercise E3)
+static volatile float error_E4 = 0.0;       // Error for proportional-integral (exercise E4)
 
 /* Initialize functions */
 void readUART2(char* message, int maxLength);
