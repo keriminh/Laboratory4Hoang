@@ -2,10 +2,8 @@
 File:   main.c
 Author: Minh Hoang
 Date: November 4th, 2025
-Description: In this file, the system clock is set to operate at 80MHz and multiple functions are performed. Change notification ISR is set up to record
- and calculate the value of of the encoder's count. UART2 ISR is called to read the reference angle from MATLAB script, reset the core timer, and enable Timer5 ISR.
- Timer5 ISR is called to write the DC motorgear's angle and the current time to MATLAB at 10Hz, and disable itself after 80 samples sent, or 8 seconds.
- Additionally, in the while(1) loop of the main(), reference angle and the DC gearmotor's angle are written on the LCD display using the LCD display driver created in previous lab.
+Description: 
+
 */
 
 #pragma config POSCMOD = HS
@@ -37,7 +35,9 @@ static volatile float referenceAngle = 0;   // Reference angle
 static volatile float angle = 0;            // Current angle
 
 static volatile float error_E3 = 0.0;       // Error for proportional (exercise E3)
+const float k_E3 = 4.0;
 static volatile float error_E4 = 0.0;       // Error for proportional-integral (exercise E4)
+const float k_E4 = 2.0;
 
 /* Initialize functions */
 void readUART2(char* message, int maxLength);
@@ -285,9 +285,30 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
         }
     } else if(controlMode == 1){	// Proportional control
         LATAbits.LATA6 = 1;         // Turn on LED D9 to check
+        error_E3 = refAngle - angle;
+        if(fabs(k_E3 * error_E3) >= 1023){
+            OC4RS = 1023;
+        } else{
+            OC4RS = fabs(k_E3 * error_E3);
+        }
+
+        if(angleDiff < -7.5){       // If ref angle < current angle 
+            // F1 = 1; F0 = 0 to decrease count
+            LATFbits.LATF1 = 1;
+            LATFbits.LATF0 = 0;
+        } else if(angleDiff > 7.5){ // If ref angle > current angle
+            // F1 = 0; F0 = 1 to increase count
+            LATFbits.LATF1 = 0;
+            LATFbits.LATF0 = 1;
+        } else if(angleDiff == 0){  // If angleDiff = 0 then stop changing the count                          
+            // F1 = 0; F0 = 0 to stop changing count
+            LATFbits.LATF1 = 0;
+            LATFbits.LATF0 = 0;
+        }
         
     } else if(controlMode == 2){	// Proportional-integral control
         LATAbits.LATA7 = 1;         // Turn on LED D10 to check
+        
         
     }
 }
