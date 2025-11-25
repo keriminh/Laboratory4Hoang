@@ -111,6 +111,8 @@ void main(void){
     T2CONbits.TCS = 0;
     IPC2bits.T2IP = 5;      // Sub-priority 0 for Timer 2
     IPC2bits.T2IS = 0;      // Sub-priority 0 for Timer 2
+    T2CONbits.ON = 1;       // Turn on Timer 2
+    IEC0bits.T2IE = 1;      // Enable Timer 2
     IFS0bits.T2IF = 0;      // CLear flag
     
     // Timer 3 and OC4
@@ -216,7 +218,7 @@ void __ISR(_CHANGE_NOTICE_VECTOR, IPL5SOFT) CNINT(void){
 }
 
 void __ISR(_EXTERNAL_2_VECTOR, IPL5SOFT) S5(void){ // External interrupt 2 for S5
-    controlMode = 2;
+    controlMode = 2;                // S5 pressed, controlMode = 2
     IFS0bits.INT2IF = 0;
 }
 
@@ -226,13 +228,10 @@ void __ISR(_UART_2_VECTOR, IPL6SOFT) U2RX(void){
     readUART2(messageBuffer, 10);
     referenceAngle = atof(messageBuffer);
     
-    // Reset and start timer 5 and timer 2
+    // Reset and start timer 5
     TMR5 = 0;
     T5CONbits.ON = 1;
     IEC0bits.T5IE = 1;
-    TMR2 = 0;
-    T2CONbits.ON = 1;
-    IEC0bits.T2IE = 1;
     
     _CP0_SET_COUNT(0);
     
