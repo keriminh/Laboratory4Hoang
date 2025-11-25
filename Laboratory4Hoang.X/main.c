@@ -285,7 +285,7 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
     } else if(controlMode == 1){	// Proportional control
         LATAbits.LATA6 = 1;         // Turn on LED D9 to check
         e_p = angleDiff;
-        if(fabs(g_p * e_p) >= 1023){
+        if(fabs(g_p * e_p) > 1023){
             OC4RS = 1023;
         } else{
             OC4RS = fabs(g_p * e_p);
