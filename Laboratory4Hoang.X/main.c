@@ -34,10 +34,10 @@ static volatile int count = 0;
 static volatile float referenceAngle = 0;   // Reference angle
 static volatile float angle = 0;            // Current angle
 
-static volatile float error_E3 = 0.0;       // Error for proportional (exercise E3)
-const float k_E3 = 4.0;
-static volatile float error_E4 = 0.0;       // Error for proportional-integral (exercise E4)
-const float k_E4 = 2.0;
+static volatile float e_p = 0.0;       // Error for proportional (exercise E3)
+const float k_p = 4.0;
+static volatile float e_i = 0.0;       // Error for proportional-integral (exercise E4)
+const float k_i = 2.0;
 
 /* Initialize functions */
 void readUART2(char* message, int maxLength);
@@ -285,11 +285,11 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
         }
     } else if(controlMode == 1){	// Proportional control
         LATAbits.LATA6 = 1;         // Turn on LED D9 to check
-        error_E3 = refAngle - angle;
-        if(fabs(k_E3 * error_E3) >= 1023){
+        e_p = angleDiff;
+        if(fabs(k_p * e_p) >= 1023){
             OC4RS = 1023;
         } else{
-            OC4RS = fabs(k_E3 * error_E3);
+            OC4RS = fabs(k_p * e_p);
         }
 
         if(angleDiff < -7.5){       // If ref angle < current angle 
@@ -308,9 +308,30 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) T2(void){
         
     } else if(controlMode == 2){	// Proportional-integral control
         LATAbits.LATA7 = 1;         // Turn on LED D10 to check
-        
-        
+        e_p = angleDiff;
+        e_i = e_i + (1/50) * e_p;
+
+        if(fabs((k_p * e_p) + (k_i * e_i)) >= 1023){
+            OC4RS = 1023;
+        } else{
+            OC4RS = fabs((k_p * e_p) + (k_i * e_i));
+        }
+
+        if(angleDiff < -7.5){       // If ref angle < current angle 
+            // F1 = 1; F0 = 0 to decrease count
+            LATFbits.LATF1 = 1;
+            LATFbits.LATF0 = 0;
+        } else if(angleDiff > 7.5){ // If ref angle > current angle
+            // F1 = 0; F0 = 1 to increase count
+            LATFbits.LATF1 = 0;
+            LATFbits.LATF0 = 1;
+        } else if(angleDiff == 0){  // If angleDiff = 0 then stop changing the count                          
+            // F1 = 0; F0 = 0 to stop changing count
+            LATFbits.LATF1 = 0;
+            LATFbits.LATF0 = 0;
+        }   
     }
+    IFS0bits.T2IF = 0;              // Clear flag
 }
 
 void readUART2(char* message, int maxLength){
