@@ -1,8 +1,8 @@
 /* 
 File:   main.c
 Author: Minh Hoang
-Date: November 4th, 2025
-Description: 
+Date: November 25th, 2025
+Description: This is the main file which receives and transmits data from and to an external MATLAB script via UART. Additionally, the DC motor's angle is interpreted, calculated, and displayed on the LCD screen together with the reference angle received from MATLAB. There are also three methods to automatically calibrate the DC motor's angle to be equal to the reference angle, including On/Off DC motor control, proportional controller, and proportional-integral controller. These three methods can be used when pressing S3, S4, and S5, respectively.
 
 */
 
@@ -374,6 +374,7 @@ int read_potentiometer(void){
 
     return ADC1BUF0;   // Return result in 10 bits
 }
+
 
 
 
